@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Collections by Boxset</title>
+</head>
+<body>
+<div id="cbbPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+  <div data-role="content">
+    <div class="content-primary">
+      <h1>Collections by Boxset</h1>
+      <p>Ordner, deren Name auf <code>[boxset]</code> endet, werden zu Sammlungen. Der Marker erscheint nicht im Sammlungsnamen.</p>
+      <form id="cbbForm">
+        <div class="inputContainer">
+          <label class="inputLabel inputLabelUnfocused" for="cbbRoots">Erlaubte Pfade (einer pro Zeile, leer = alle)</label>
+          <textarea id="cbbRoots" rows="5" is="emby-textarea" class="emby-textarea"></textarea>
+        </div>
+        <div class="inputContainer">
+          <label class="inputLabel inputLabelUnfocused" for="cbbExclusions">Ausgeschlossene Pfade (einer pro Zeile)</label>
+          <textarea id="cbbExclusions" rows="4" is="emby-textarea" class="emby-textarea"></textarea>
+        </div>
+        <div class="inputContainer">
+          <label class="inputLabel inputLabelUnfocused" for="cbbMin">Mindestanzahl Filme</label>
+          <input id="cbbMin" type="number" min="1" is="emby-input" />
+        </div>
+        <label class="checkboxContainer">
+          <input id="cbbRemove" type="checkbox" is="emby-checkbox" />
+          <span>Filme entfernen, die nicht mehr im [boxset]-Ordner liegen (nur Plugin-Sammlungen)</span>
+        </label>
+        <label class="checkboxContainer">
+          <input id="cbbImages" type="checkbox" is="emby-checkbox" />
+          <span>Vorhandene Bilder aus dem [boxset]-Ordner uebernehmen (ohne Ueberschreiben)</span>
+        </label>
+        <div>
+          <button is="emby-button" type="submit" class="raised button-submit block"><span>Speichern</span></button>
+          <button is="emby-button" type="button" id="cbbScan" class="raised block"><span>Jetzt scannen</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script type="text/javascript">
+    (function () {
+      var pluginId = '92e7bf59-1970-45c9-8df1-714f7eb80f55';
+      var page = document.querySelector('#cbbPage');
+      function lines(id) {
+        return page.querySelector(id).value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+      }
+      function load() {
+        Dashboard.showLoadingMsg();
+        ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+          page.querySelector('#cbbRoots').value = (c.Roots || []).join('\n');
+          page.querySelector('#cbbExclusions').value = (c.Exclusions || []).join('\n');
+          page.querySelector('#cbbMin').value = c.MinMovies || 1;
+          page.querySelector('#cbbRemove').checked = c.RemoveMissing !== false;
+          page.querySelector('#cbbImages').checked = c.CopyImages !== false;
+          Dashboard.hideLoadingMsg();
+        });
+      }
+      page.addEventListener('pageshow', load);
+      page.querySelector('#cbbForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        Dashboard.showLoadingMsg();
+        ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+          c.Roots = lines('#cbbRoots');
+          c.Exclusions = lines('#cbbExclusions');
+          c.MinMovies = parseInt(page.querySelector('#cbbMin').value, 10) || 1;
+          c.RemoveMissing = page.querySelector('#cbbRemove').checked;
+          c.CopyImages = page.querySelector('#cbbImages').checked;
+          return ApiClient.updatePluginConfiguration(pluginId, c);
+        }).then(Dashboard.processPluginConfigurationUpdateResult);
+      });
+      page.querySelector('#cbbScan').addEventListener('click', function () {
+        Dashboard.showLoadingMsg();
+        ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Plugins/CollectionsByBoxset/Scan'), dataType: 'json' })
+          .then(function (r) {
+            Dashboard.hideLoadingMsg();
+            Dashboard.alert('Erstellt: ' + r.Created + ', aktualisiert: ' + r.Updated + ', uebersprungen: ' + r.Skipped);
+          }, function () {
+            Dashboard.hideLoadingMsg();
+            Dashboard.alert('Scan fehlgeschlagen (siehe Jellyfin-Log, Stichwort CBB).');
+          });
+      });
+    })();
+  </script>
+</div>
+</body>
+</html>

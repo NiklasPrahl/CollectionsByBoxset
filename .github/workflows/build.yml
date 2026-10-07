@@ -1,142 +1,78 @@
-name: Build and Release Jellyfin Plugin
+name: Build, test and release
 
 on:
   push:
-    tags:
-      - 'v*'              # z. B. v0.4.0
+    branches: [main]
+    tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write         # nötig für Release + Push auf main
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout (vollständig, für Push auf main)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
         with:
-          fetch-depth: 0
-          persist-credentials: true
+          dotnet-version: '10.0.x'
 
-      - name: Setup .NET 9 (für Jellyfin 10.11)
-        uses: actions/setup-dotnet@v4
+      - name: Test
+        run: dotnet test tests/Jellyfin.Plugin.CollectionsByBoxset.Tests/Jellyfin.Plugin.CollectionsByBoxset.Tests.csproj -c Release
+
+      - name: Build plugin
+        run: dotnet build src/Jellyfin.Plugin.CollectionsByBoxset/Jellyfin.Plugin.CollectionsByBoxset.csproj -c Release -o build
+
+      - name: Package
+        run: |
+          mkdir -p out
+          (cd build && zip -9 ../out/Jellyfin.Plugin.CollectionsByBoxset.zip Jellyfin.Plugin.CollectionsByBoxset.dll)
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
         with:
-          dotnet-version: '9.0.x'
+          name: plugin-zip
+          path: out/Jellyfin.Plugin.CollectionsByBoxset.zip
 
-      - name: Restore
-        run: dotnet restore src/Jellyfin.Plugin.CollectionsByFolder/Jellyfin.Plugin.CollectionsByFolder.csproj
-
-      - name: Build (DLL only, no publish)
-        run: dotnet build src/Jellyfin.Plugin.CollectionsByFolder/Jellyfin.Plugin.CollectionsByFolder.csproj --configuration Release --no-restore
-
-      - name: Package new plugin (10.11 build)
+      - name: Create manifest
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          set -e
-          OUTDIR=out
-          DLL=src/Jellyfin.Plugin.CollectionsByFolder/bin/Release/net9.0/Jellyfin.Plugin.CollectionsByFolder.dll
-          mkdir -p "$OUTDIR"
-          cp "$DLL" "$OUTDIR"/
-          (cd "$OUTDIR" && zip -9r Jellyfin.Plugin.CollectionsByFolder.zip Jellyfin.Plugin.CollectionsByFolder.dll)
-          ls -l "$OUTDIR"
-
-      - name: Compute MD5 checksum for new ZIP (lowercase)
-        id: md5
-        run: |
-          echo "md5=$(md5sum out/Jellyfin.Plugin.CollectionsByFolder.zip | awk '{print tolower($1)}')" >> $GITHUB_OUTPUT
-
-      - name: Generate manifest.json (mit 10.10.x und 10.11.x)
-        id: manifest
-        shell: bash
-        run: |
-          #
-          # Statischer Block: alte funktionierende Version für Jellyfin 10.10.x
-          # Dieser Teil ändert sich nicht mehr, weil die alte DLL schon veröffentlicht ist.
-          #
-          OLD_VERSION="0.3.4.0"
-          OLD_TAG="v0.3.4"
-          OLD_ABI="10.10.0.0"
-          OLD_URL="https://github.com/Solas79/folder-collection/releases/download/${OLD_TAG}/Jellyfin.Plugin.CollectionsByFolder.zip"
-          OLD_CHECKSUM="60f5a54117f8feb5f1f2b777bd128074"
-          OLD_TIMESTAMP="2025-10-07T08:52:20Z"
-          OLD_CHANGELOG="Automatischer Build für ${OLD_TAG} (Jellyfin 10.10.x)"
-
-          #
-          # Dynamischer Block: neue Version für Jellyfin 10.11.x
-          #
-          NEW_TAG="${GITHUB_REF_NAME}"          # z. B. v0.4.0
-          NEW_VERSION="${NEW_TAG#v}.0"          # v0.4.0 -> 0.4.0.0
-          NEW_ABI="10.11.0.0"                   # ggf. anpassen auf ABI deines 10.11-Servers
-          NEW_URL="https://github.com/${{ github.repository }}/releases/download/${NEW_TAG}/Jellyfin.Plugin.CollectionsByFolder.zip"
-          NEW_CHECKSUM="${{ steps.md5.outputs.md5 }}"
-          NEW_TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          NEW_CHANGELOG="Automatischer Build für ${NEW_TAG} (Jellyfin 10.11.x)"
-
-          cat > manifest.json <<JSON
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}.0"
+          MD5=$(md5sum out/Jellyfin.Plugin.CollectionsByBoxset.zip | awk '{print tolower($1)}')
+          TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cat > out/manifest.json <<JSON
           [
             {
+              "guid": "92e7bf59-1970-45c9-8df1-714f7eb80f55",
+              "name": "Collections by Boxset",
+              "overview": "Erstellt Sammlungen aus Ordnern mit [boxset] im Namen.",
+              "description": "Ordner, deren Name auf [boxset] endet, werden zu Jellyfin-Sammlungen.",
+              "owner": "NiklasPrahl",
               "category": "Library",
-              "guid": "f58f3a40-6a8a-48e8-9b3a-9d7f0b6a3a41",
-              "name": "CollectionsByFolder",
-              "owner": "Solas79",
-              "overview": "Erstellt/aktualisiert Collections anhand des letzten Ordnernamens.",
-              "description": "Mehrere Pfade, Präfix/Suffix, Blacklist, Mindestanzahl und manueller Scan.",
               "versions": [
                 {
-                  "version": "${OLD_VERSION}",
-                  "targetAbi": "${OLD_ABI}",
-                  "sourceUrl": "${OLD_URL}",
-                  "checksum": "${OLD_CHECKSUM}",
-                  "timestamp": "${OLD_TIMESTAMP}",
-                  "changelog": "${OLD_CHANGELOG}"
-                },
-                {
-                  "version": "${NEW_VERSION}",
-                  "targetAbi": "${NEW_ABI}",
-                  "sourceUrl": "${NEW_URL}",
-                  "checksum": "${NEW_CHECKSUM}",
-                  "timestamp": "${NEW_TIMESTAMP}",
-                  "changelog": "${NEW_CHANGELOG}"
+                  "version": "${VERSION}",
+                  "changelog": "Release ${TAG}",
+                  "targetAbi": "12.2.0.0",
+                  "sourceUrl": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Jellyfin.Plugin.CollectionsByBoxset.zip",
+                  "checksum": "${MD5}",
+                  "timestamp": "${TS}"
                 }
               ]
             }
           ]
           JSON
+          sed -i 's/^          //' out/manifest.json
+          cat out/manifest.json
 
-          cat manifest.json
-
-      - name: Create / Update GitHub Release (attach new ZIP + manifest.json)
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          name: CollectionsByFolder ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
           files: |
-            out/Jellyfin.Plugin.CollectionsByFolder.zip
-            manifest.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Commit manifest.json to main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -e
-          TMP="$(mktemp)"
-          cp -f manifest.json "$TMP"
-
-          git fetch origin main
-          git checkout -B main origin/main
-
-          mv -f "$TMP" manifest.json
-          git add manifest.json
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "Update manifest for ${GITHUB_REF_NAME}"
-            git push origin main
-          fi
+            out/Jellyfin.Plugin.CollectionsByBoxset.zip
+            out/manifest.json

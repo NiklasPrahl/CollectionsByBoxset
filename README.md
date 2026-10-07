@@ -1,107 +1,74 @@
+# Collections by Boxset
 
-## https://raw.githubusercontent.com/Solas79/folder-collection/main/manifest.json
+Ein Plugin für Jellyfin 12.2, das aus Ordnern mit dem Zusatz `[boxset]` im Namen automatisch Sammlungen erstellt.
 
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Es ist ein Fork von [CollectionsByFolder](https://github.com/Solas79/folder-collection) von Solas79, angepasst an Jellyfin 12.2 und .NET 10.
 
-**German version -> English version below**
+## Wie es funktioniert
 
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# CollectionsByFolder (Jellyfin Plugin)
+Das Plugin sucht in deinen Filmordnern nach Ordnern, deren Name auf `[boxset]` endet. Jeder dieser Ordner wird zu einer Sammlung, die alle Filme darin enthält, auch aus Unterordnern.
 
-Erstellt und pflegt Sammlungen (Collections) basierend auf dem **letzten Ordnernamen**.
-
-## Features
-- Mehrere Verzeichnisse möglich
-- Präfix & Suffix für Collection-Namen
-- Blacklist für Ordnernamen
-- Mindestanzahl an Elementen pro Ordner
-- Button **Jetzt scannen** in den Einstellungen
-
-Es werden nur Ordner aus der Whitelist gescannt
-Ordner in der Blacklist werden ignoriert
-
-Es werden alle Unterordner des angegebenen Verzeichnisses gescannt und  nur die "Endordner" als Collection angelegt.
-
-In der Whitelist und Blacklist sind die Ordnerstrukturen so einzutragen
-
-Beispiel:
-/mnt/nas1/Filme
-(Linux: gemountetes Laufwerk:nas1 / Ordner Filme)
-
-Beispeil Docker:
-/data/Filme
-/media/Filme
-
-<img width="401" height="123" alt="Bildschirmfoto 2025-10-07 um 10 19 39" src="https://github.com/user-attachments/assets/80f820fa-2118-464d-8fb9-ef1511a8dd79" />
-
-Präfix -> erstellt einen Eintrag vor dem Collection Namen
-Sufix -> erstellt einen Eintrag nach dem Collection Namen
-
-Mindestanzahl an Dateien -> Ordner mit weniger Dateien werden ignoriert und nicht als Collection angelegt.
-
-## Jellyfin 10.11
-Plugin über Puzzleteil -> Einstellungen öffnen 
-
-<img width="402" height="344" alt="Bildschirmfoto 2025-10-25 um 12 13 28" src="https://github.com/user-attachments/assets/4d27e756-9111-4084-ac14-35af5b2236f6" />
-
-
-Wurde mit **Jellyfin 10.10.7** (Linuxserver) getestet (Release 0.3.4)
-
-Wurde mit **Jellyfin 10.11.0** (Linuxserver) getestet (Release > 0.3.4)
-
-
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-**English verision**
-
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# CollectionsByFolder (Jellyfin Plugin)
-
-Creates and maintains collections based on the **last folder name**.
-
-## Features
-- Multiple directories supported
-- Prefix & suffix for collection names
-- Blacklist for folder names
-- Minimum number of items per folder
-- **Scan now** button in the settings
-
-Only whitelisted folders are scanned
-Folders in the blacklist are ignored
-
-All subfolders of the specified directory are scanned, and only the "end folders" are created as collections.
-
-The folder structures in the whitelist and blacklist should be entered as follows:
-
-Example:
-/mnt/nas1/Filme
-(Linux: mounted drive: nas1 / folder "Filme")
-
-Docker example:
-/data/Filme
-/media/Filme
-
-<img width="401" height="123" alt="Screenshot 2025-10-07 at 10:19:39" src="https://github.com/user-attachments/assets/80f820fa-2118-464d-8fb9-ef1511a8dd79" />
-
-Prefix -> creates an entry before the collection name
-Sufix -> creates an entry after the collection name
-
-Minimum number of files -> Folders with fewer files are ignored and not created as a collection.
-
-## Jellyfin 10.11
-Open plugin via puzzle piece -> Settings
-
-<img width="402" height="344" alt="Bildschirmfoto 2025-10-25 um 12 13 28" src="https://github.com/user-attachments/assets/4d27e756-9111-4084-ac14-35af5b2236f6" />
-
-Tested with **Jellyfin 10.10.7** (Linux server) (Release 0.3.4)
-
-Tested with **Jellyfin 10.11.0** (Linux server) (Release > 0.3.4)
-
-
-
-## Build
-```bash
-dotnet publish src/Jellyfin.Plugin.CollectionsByFolder/Jellyfin.Plugin.CollectionsByFolder.csproj -c Release
+```text
+Filme/
+└── Alien [boxset]/
+    ├── Alien (1979)/
+    │   └── Alien.mkv
+    └── Aliens (1986)/
+        └── Aliens.mkv
 ```
 
-DLL danach nach `plugins/CollectionsByFolder/` kopieren und Jellyfin neu starten.
+Aus diesem Beispiel entsteht die Sammlung **Alien** mit beiden Filmen. Der Zusatz `[boxset]` erscheint nur im Ordnernamen, nicht im Namen der Sammlung. Deine Ordner und Dateien werden nie verändert.
+
+Die Sammlungen entstehen auf jedem Jellyfin-Server aus den dort vorhandenen Ordnern. Wenn du dieselbe Ordnerstruktur auf einen zweiten Server synchronisierst, bekommst du dort dieselben Sammlungen, ohne sie von Hand anzulegen.
+
+## Regeln
+
+- Bei verschachtelten Markierungen gilt der nächstgelegene Ordner mit `[boxset]` oberhalb des Films.
+- Das Plugin ändert nur Sammlungen, die es selbst erstellt hat. Manuell angelegte Sammlungen bleiben unberührt.
+- Gibt es bereits eine nicht verwaltete Sammlung mit demselben Namen, oder ergeben zwei Ordner denselben Namen, wird dieser Fall übersprungen und im Log gemeldet.
+- Filme, die nicht mehr im markierten Ordner liegen, werden aus der Plugin-Sammlung entfernt. Das lässt sich in den Einstellungen abschalten.
+- Vorhandene Bilder im markierten Ordner (zum Beispiel `poster.jpg`, `folder.jpg`, `backdrop.jpg`) werden in die Sammlung übernommen. Bereits vorhandene Bilder werden nicht überschrieben.
+
+## Installation
+
+1. Öffne in Jellyfin **Dashboard › Plugins › Repositories** und füge ein neues Repository hinzu.
+2. Trage diese URL ein:
+
+   ```text
+   https://github.com/NiklasPrahl/CollectionsByBoxset/releases/latest/download/manifest.json
+   ```
+
+3. Öffne den **Katalog**, installiere „Collections by Boxset“ und starte Jellyfin neu.
+
+Die URL funktioniert erst, nachdem im Repository ein Release veröffentlicht wurde.
+
+## Einrichtung
+
+Öffne **Dashboard › Plugins › Collections by Boxset**.
+
+| Einstellung | Bedeutung |
+|---|---|
+| Erlaubte Pfade | Ordner, in denen gesucht wird, einer pro Zeile. Leer bedeutet: alle Bibliothekspfade. |
+| Ausgeschlossene Pfade | Ordner, die ignoriert werden. |
+| Mindestanzahl Filme | Ordner mit weniger Filmen werden übersprungen. |
+| Filme entfernen | Entfernt Filme aus Plugin-Sammlungen, wenn sie nicht mehr im Ordner liegen. |
+| Bilder übernehmen | Kopiert vorhandene Bilder aus dem Ordner, ohne Bestehendes zu überschreiben. |
+
+Mit **Jetzt scannen** startest du den Abgleich sofort. Zusätzlich gibt es unter **Dashboard › Geplante Aufgaben** die Aufgabe „Sammlungen aus [boxset]-Ordnern aktualisieren“, der du einen Zeitplan geben kannst.
+
+Meldungen des Plugins stehen im Jellyfin-Log mit dem Kürzel `CBB`.
+
+## Selbst bauen
+
+Benötigt .NET-10-SDK.
+
+```bash
+dotnet test tests/Jellyfin.Plugin.CollectionsByBoxset.Tests/Jellyfin.Plugin.CollectionsByBoxset.Tests.csproj -c Release
+dotnet build src/Jellyfin.Plugin.CollectionsByBoxset/Jellyfin.Plugin.CollectionsByBoxset.csproj -c Release -o build
+```
+
+Die fertige Datei liegt danach unter `build/Jellyfin.Plugin.CollectionsByBoxset.dll`. Zum manuellen Einsetzen kopierst du sie in einen Unterordner des Jellyfin-Plugin-Verzeichnisses und startest Jellyfin neu.
+
+## Lizenz
+
+GPL-3.0-or-later. Siehe [LICENSE](LICENSE) und [NOTICE.md](NOTICE.md).

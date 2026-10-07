@@ -1,0 +1,13 @@
+/Users/niklas.prahl/Coding/CollectionsByBoxset/build/Jellyfin.Plugin.CollectionsByBoxset.deps.json
+/Users/niklas.prahl/Coding/CollectionsByBoxset/build/Jellyfin.Plugin.CollectionsByBoxset.dll
+/Users/niklas.prahl/Coding/CollectionsByBoxset/build/Jellyfin.Plugin.CollectionsByBoxset.pdb
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.csproj.AssemblyReference.cache
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.GeneratedMSBuildEditorConfig.editorconfig
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.AssemblyInfoInputs.cache
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.AssemblyInfo.cs
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.csproj.CoreCompileInputs.cache
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.sourcelink.json
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.dll
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/refint/Jellyfin.Plugin.CollectionsByBoxset.dll
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/Jellyfin.Plugin.CollectionsByBoxset.pdb
+/Users/niklas.prahl/Coding/CollectionsByBoxset/src/Jellyfin.Plugin.CollectionsByBoxset/obj/Release/net10.0/ref/Jellyfin.Plugin.CollectionsByBoxset.dll
